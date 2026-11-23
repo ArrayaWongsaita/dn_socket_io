@@ -49,8 +49,8 @@ export class BroadcastGateway implements OnGatewayInit, OnGatewayConnection {
   // A room is just a named group of sockets. Why do this?
   // The same person can open many tabs (many sockets). Sending to the room
   // `user:1` reaches ALL of Alice's tabs at once.
-  handleConnection(client: Socket) {
-    client.join(userRoom(client.data.user.id));
+  async handleConnection(client: Socket) {
+    await client.join(userRoom(client.data.user.id));
   }
 
   // 1) Send to ONLY the sender  ->  client.emit(...)
