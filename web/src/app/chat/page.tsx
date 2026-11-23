@@ -81,17 +81,25 @@ function ChatLesson({ me }: { me: User }) {
       await socket.emitWithAck("room:leave", { roomId: roomIdRef.current });
     }
 
+    // Remember the new room BEFORE joining: the server sends the member list
+    // right away, and our listener must already know which room we are in.
+    roomIdRef.current = newRoomId;
+    setRoomId(newRoomId);
+    setMembers([]);
+    setMessages([]);
+
     const reply = await socket.emitWithAck("room:join", { roomId: newRoomId });
     if (!reply.ok) {
+      roomIdRef.current = null;
+      setRoomId(null);
       setError(reply.error);
       return;
     }
 
-    roomIdRef.current = newRoomId;
-    setRoomId(newRoomId);
-    setMembers([]);
-    const history = await fetch(`${API_URL}/rooms/${newRoomId}/messages`).then((res) => res.json());
-    setMessages(history);
+    // Load the old messages (REST). Keep any live message that arrived meanwhile,
+    // without showing the same message twice.
+    const history: Message[] = await fetch(`${API_URL}/rooms/${newRoomId}/messages`).then((res) => res.json());
+    setMessages((live) => [...history, ...live.filter((m) => !history.some((h) => h.id === m.id))]);
   }
 
   // Send what the user typed to the room they are in.
