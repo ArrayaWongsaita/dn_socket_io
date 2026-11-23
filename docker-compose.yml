@@ -1,0 +1,14 @@
+# Postgres for the Socket.IO lesson. Start it with:  docker compose up -d
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: socket
+      POSTGRES_PASSWORD: socket
+      POSTGRES_DB: socket_io_basic
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
