@@ -42,6 +42,14 @@ describe('/connection namespace', () => {
     await expect(connectAs(server.url, '/connection', 9999)).rejects.toThrow('user not found');
   });
 
+  it('refuses a userId too big for the database instead of crashing the server', async () => {
+    await expect(connectAs(server.url, '/connection', 3_000_000_000)).rejects.toThrow('user not found');
+    // the server must still be alive for the next person
+    const socket = await connectAs(server.url, '/connection', 1);
+    sockets.push(socket);
+    expect(socket.connected).toBe(true);
+  });
+
   it('can disconnect', async () => {
     const socket = await connectAs(server.url, '/connection', 1);
     socket.disconnect();

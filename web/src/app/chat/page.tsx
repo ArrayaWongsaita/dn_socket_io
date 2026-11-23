@@ -42,7 +42,15 @@ function ChatLesson({ me }: { me: User }) {
     const socket = createSocket("/chat", me.id);
     socketRef.current = socket;
 
-    socket.on("connect", () => setConnected(true));
+    // 'connect' also fires again after the connection drops and comes back
+    // (Socket.IO reconnects by itself). The server forgets our rooms when we
+    // disconnect, so if we were in a room we must join it again.
+    socket.on("connect", () => {
+      setConnected(true);
+      if (roomIdRef.current !== null) {
+        socket.emit("room:join", { roomId: roomIdRef.current });
+      }
+    });
     socket.on("disconnect", () => setConnected(false));
 
     // A new message arrived in a room I am in -> add it to the list.

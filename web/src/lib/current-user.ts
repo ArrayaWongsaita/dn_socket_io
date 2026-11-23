@@ -3,7 +3,8 @@
 import { useSyncExternalStore } from "react";
 
 // "Logging in" in this course = picking a user on the home page.
-// We remember the choice in localStorage so every page knows who you are.
+// We remember the choice in sessionStorage so every page of THIS browser tab knows who you are.
+// (sessionStorage is per tab, so each tab/window can be a different user at the same time.)
 
 export type CurrentUser = { id: number; name: string };
 
@@ -13,25 +14,23 @@ const listeners = new Set<() => void>();
 // Reads the saved user as raw text (a string is easy for React to compare).
 function readRaw(): string | null {
   try {
-    return localStorage.getItem(KEY);
+    return sessionStorage.getItem(KEY);
   } catch {
-    return null; // localStorage can be blocked; behave as "nobody picked yet"
+    return null; // sessionStorage can be blocked; behave as "nobody picked yet"
   }
 }
 
 function subscribe(onChange: () => void) {
   listeners.add(onChange);
-  window.addEventListener("storage", onChange); // other tabs changed it
   return () => {
     listeners.delete(onChange);
-    window.removeEventListener("storage", onChange);
   };
 }
 
 export function saveCurrentUser(user: CurrentUser | null) {
   try {
-    if (user) localStorage.setItem(KEY, JSON.stringify(user));
-    else localStorage.removeItem(KEY);
+    if (user) sessionStorage.setItem(KEY, JSON.stringify(user));
+    else sessionStorage.removeItem(KEY);
   } catch {
     // ignore: nothing we can do if storage is blocked
   }
@@ -41,5 +40,10 @@ export function saveCurrentUser(user: CurrentUser | null) {
 // React hook: `const user = useCurrentUser()` -> { id, name } or null.
 export function useCurrentUser(): CurrentUser | null {
   const raw = useSyncExternalStore(subscribe, readRaw, () => null);
-  return raw ? (JSON.parse(raw) as CurrentUser) : null;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as CurrentUser;
+  } catch {
+    return null; // a corrupted saved value counts as "nobody picked yet"
+  }
 }

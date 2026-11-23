@@ -19,7 +19,7 @@ Each page uses its own Socket.IO **namespace** (`/connection`, `/broadcast`, `/c
 
 ## Setup
 
-Requirements: Node.js 22+, pnpm, Docker.
+Requirements: Node.js 22.12+ (or 24), pnpm 10+, Docker.
 
 ```bash
 # 1. Database (Postgres on port 5434)
@@ -27,7 +27,9 @@ docker compose up -d
 
 # 2. API  (http://localhost:3001)
 cd api
+cp .env.example .env            # settings (database address, ports)
 pnpm install
+pnpm prisma generate            # only if `pnpm install` did not already do it
 pnpm prisma migrate deploy      # create the tables
 pnpm db:seed                    # create users Alice, Bob, Carol, Dave and 3 rooms
 pnpm start:dev
@@ -42,7 +44,7 @@ pnpm dev
 
 ## How to practise
 
-Open <http://localhost:3000> in **two different browser windows** (use a private/incognito window for the second one so each window can be a different user), pick a different user in each, and try the pages side by side.
+Open <http://localhost:3000> in **two or three browser windows or tabs**, pick a different user in each (the choice is remembered per tab), and try the pages side by side.
 
 See [docs/lessons.md](docs/lessons.md) for a step-by-step guide per page.
 

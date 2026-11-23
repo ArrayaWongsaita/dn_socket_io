@@ -20,7 +20,15 @@ export function createAuthMiddleware(prisma: PrismaService) {
     }
 
     // Step 2: that number must belong to a user in the database.
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    // We wrap the database call in try/catch: Socket.IO does not handle errors thrown
+    // inside middleware, so without this a bad id (or a stopped database) would crash the server.
+    let user;
+    try {
+      // Ids in Postgres are 32-bit integers; anything bigger cannot exist.
+      user = userId > 0 && userId <= 2_147_483_647 ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+    } catch {
+      return next(new Error('could not check the user right now, is the database running?'));
+    }
     if (!user) {
       return next(new Error('user not found'));
     }

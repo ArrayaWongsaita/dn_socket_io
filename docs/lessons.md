@@ -23,7 +23,7 @@ Files: `api/src/connection/connection.gateway.ts`, `api/src/socket/auth.middlewa
 5. API: `@SubscribeMessage('ping')` returns a value, which is the acknowledgement.
 6. Web: `socket.emitWithAck('ping')`.
 
-Try it: connect, ping, then press "Connect as a user that does not exist".
+Try it: connect, ping, press Disconnect, then press "Connect as a user that does not exist".
 
 ## Page 2: Broadcast
 
