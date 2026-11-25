@@ -5,6 +5,9 @@ import { io, type Socket } from "socket.io-client";
 import { API_URL } from "./config";
 import { useSocketLog } from "./use-socket-log";
 
+// How long emitWithAck waits for the server's answer before giving up (an error is thrown).
+export const ACK_TIMEOUT_MS = 3000;
+
 // Lessons 3-9 use this so the page can focus on the lesson itself.
 // You wrote the same thing by hand in lessons 1 and 2:
 //   - connect to  API_URL + "/" + namespace   (for example http://localhost:3001/lesson3)
@@ -12,7 +15,7 @@ import { useSocketLog } from "./use-socket-log";
 export function useLessonSocket(namespace: string) {
   // Created once, but not connected yet (it only exists in the browser, never on the server).
   const [socket] = useState<Socket | null>(() =>
-    typeof window === "undefined" ? null : io(`${API_URL}/${namespace}`, { autoConnect: false }),
+    typeof window === "undefined" ? null : io(`${API_URL}/${namespace}`, { autoConnect: false, ackTimeout: ACK_TIMEOUT_MS }),
   );
   const [connected, setConnected] = useState(false);
   const { entries, clear } = useSocketLog(socket);

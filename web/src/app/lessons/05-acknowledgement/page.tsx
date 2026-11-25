@@ -21,12 +21,17 @@ export default function AcknowledgementLesson() {
   const [answer, setAnswer] = useState<string | null>(null);
 
   async function add() {
-    // TODO(5.2): send 'math:add' with { a: Number(a), b: Number(b) } and WAIT for the server's reply.
-    //   hint: const reply: AddReply = await socket!.emitWithAck("math:add", { a: Number(a), b: Number(b) });
-    //   then show it:  setAnswer(reply.ok ? `${a} + ${b} = ${reply.result}` : `error: ${reply.error}`)
-    //   (Type "x" instead of a number to see the error reply.)
-    void socket;
-    void setAnswer;
+    // Send 'math:add' and wait for the reply. (Send "x" instead of a number to see an error reply.)
+    try {
+      // TODO(5.2): send 'math:add' with { a: Number(a), b: Number(b) } and WAIT for the server's reply.
+      //   hint: const reply: AddReply = await socket!.emitWithAck("math:add", { a: Number(a), b: Number(b) });
+      //   then show it:  setAnswer(reply.ok ? `${a} + ${b} = ${reply.result}` : `error: ${reply.error}`)
+      //   (Type "x" instead of a number to see the error reply.)
+      void socket;
+    } catch {
+      // emitWithAck throws when the server does not answer in time (see ACK_TIMEOUT_MS).
+      setAnswer("no answer from the server: is the handler written and the API running?");
+    }
   }
 
   return (
