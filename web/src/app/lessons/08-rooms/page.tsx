@@ -22,20 +22,34 @@ export default function RoomsLesson() {
   const [text, setText] = useState("hello room");
   const [myRooms, setMyRooms] = useState<string[]>([]);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!socket) return;
     socket.on("room:message", (message: RoomMessage) => setMessages((old) => [message, ...old]));
   }, [socket]);
 
+  // emitWithAck throws when the server does not answer in time, so we show a hint instead of waiting forever.
+  const noAnswer = "no answer from the server: is the handler written and the API running?";
+
   async function join(room: string) {
-    const reply = await socket!.emitWithAck("room:join", { room });
-    setMyRooms((reply.rooms as string[]).filter((r) => ROOMS.includes(r)));
+    try {
+      const reply = await socket!.emitWithAck("room:join", { room });
+      setMyRooms((reply.rooms as string[]).filter((r) => ROOMS.includes(r)));
+      setError(null);
+    } catch {
+      setError(noAnswer);
+    }
   }
 
   async function leave(room: string) {
-    await socket!.emitWithAck("room:leave", { room });
-    setMyRooms((old) => old.filter((r) => r !== room));
+    try {
+      await socket!.emitWithAck("room:leave", { room });
+      setMyRooms((old) => old.filter((r) => r !== room));
+      setError(null);
+    } catch {
+      setError(noAnswer);
+    }
   }
 
   return (
@@ -46,6 +60,7 @@ export default function RoomsLesson() {
           Status: {connected ? "connected" : "not connected"} · You are <strong>{nickname}</strong> · In rooms:{" "}
           <strong>{myRooms.join(", ") || "none"}</strong>
         </p>
+        {error && <p className="text-red-600">{error}</p>}
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}

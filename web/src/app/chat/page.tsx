@@ -27,7 +27,7 @@ export default function ChatPage() {
 function ChatLesson({ me }: { me: User }) {
   // The connection to /chat. Your user id goes in the handshake (lesson 10), so the server knows who you are.
   const [socket] = useState<Socket | null>(() =>
-    typeof window === "undefined" ? null : io(`${API_URL}/chat`, { auth: { userId: me.id } }),
+    typeof window === "undefined" ? null : io(`${API_URL}/chat`, { auth: { userId: me.id }, ackTimeout: 3000 }),
   );
   // We need the current room inside socket listeners that are created only once,
   // so we keep a copy of it in a ref as well.
@@ -75,43 +75,56 @@ function ChatLesson({ me }: { me: User }) {
       .then(setRooms);
   }, []);
 
+  // emitWithAck throws when the server does not answer within 3 seconds: show that as an error.
+  const noAnswer = "no answer from the server: is the handler written and the API running?";
+
   // Enter a room: leave the old one, join the new one, then load old messages (REST).
   async function enterRoom(newRoomId: number) {
     if (!socket) return;
     setError(null);
 
-    if (roomIdRef.current !== null) {
-      await socket.emitWithAck("room:leave", { roomId: roomIdRef.current });
-    }
+    try {
+      if (roomIdRef.current !== null) {
+        await socket.emitWithAck("room:leave", { roomId: roomIdRef.current });
+      }
 
-    // Remember the new room BEFORE joining: the server sends the member list
-    // right away, and our listener must already know which room we are in.
-    roomIdRef.current = newRoomId;
-    setRoomId(newRoomId);
-    setMembers([]);
-    setMessages([]);
+      // Remember the new room BEFORE joining: the server sends the member list
+      // right away, and our listener must already know which room we are in.
+      roomIdRef.current = newRoomId;
+      setRoomId(newRoomId);
+      setMembers([]);
+      setMessages([]);
 
-    const reply = await socket.emitWithAck("room:join", { roomId: newRoomId });
-    if (!reply.ok) {
+      const reply = await socket.emitWithAck("room:join", { roomId: newRoomId });
+      if (!reply.ok) {
+        roomIdRef.current = null;
+        setRoomId(null);
+        setError(reply.error);
+        return;
+      }
+
+      // Load the old messages (REST). Keep any live message that arrived meanwhile,
+      // without showing the same message twice.
+      const history: Message[] = await fetch(`${API_URL}/rooms/${newRoomId}/messages`).then((res) => res.json());
+      setMessages((live) => [...history, ...live.filter((m) => !history.some((h) => h.id === m.id))]);
+    } catch {
       roomIdRef.current = null;
       setRoomId(null);
-      setError(reply.error);
-      return;
+      setError(noAnswer);
     }
-
-    // Load the old messages (REST). Keep any live message that arrived meanwhile,
-    // without showing the same message twice.
-    const history: Message[] = await fetch(`${API_URL}/rooms/${newRoomId}/messages`).then((res) => res.json());
-    setMessages((live) => [...history, ...live.filter((m) => !history.some((h) => h.id === m.id))]);
   }
 
   // Send what the user typed to the room they are in.
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!socket || roomId === null) return;
-    const reply = await socket.emitWithAck("message:send", { roomId, text });
-    if (reply.ok) setText("");
-    else setError(reply.error);
+    try {
+      const reply = await socket.emitWithAck("message:send", { roomId, text });
+      if (reply.ok) setText("");
+      else setError(reply.error);
+    } catch {
+      setError(noAnswer);
+    }
   }
 
   return (

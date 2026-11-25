@@ -21,8 +21,13 @@ export default function AcknowledgementLesson() {
 
   async function add() {
     // Send 'math:add' and wait for the reply. (Send "x" instead of a number to see an error reply.)
-    const reply: AddReply = await socket!.emitWithAck("math:add", { a: Number(a), b: Number(b) });
-    setAnswer(reply.ok ? `${a} + ${b} = ${reply.result}` : `error: ${reply.error}`);
+    try {
+      const reply: AddReply = await socket!.emitWithAck("math:add", { a: Number(a), b: Number(b) });
+      setAnswer(reply.ok ? `${a} + ${b} = ${reply.result}` : `error: ${reply.error}`);
+    } catch {
+      // emitWithAck throws when the server does not answer in time (see ACK_TIMEOUT_MS).
+      setAnswer("no answer from the server: is the handler written and the API running?");
+    }
   }
 
   return (
