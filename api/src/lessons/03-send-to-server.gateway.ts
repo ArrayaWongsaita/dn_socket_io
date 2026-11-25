@@ -18,6 +18,8 @@ export class Lesson3Gateway {
   readonly logger = new Logger('Lesson3');
 
   // TODO(3.2): listen for the 'note:send' event and print what arrived in the API terminal.
+  //   - add to the import from '@nestjs/websockets':  ConnectedSocket, MessageBody, SubscribeMessage
+  //     and add  import type { Socket } from 'socket.io'
   //   - add a method decorated with  @SubscribeMessage('note:send')
   //   - its parameters:  @ConnectedSocket() client: Socket   and   @MessageBody() body: { text: string }
   //   - hint: this.logger.log(`note from ${client.id}: ${body.text}`)

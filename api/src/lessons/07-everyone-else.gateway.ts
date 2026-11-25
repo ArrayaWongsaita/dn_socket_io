@@ -25,6 +25,7 @@ export class Lesson7Gateway {
   }
 
   // TODO(7.1): 'send:others' { from, text }  -> send to everyone EXCEPT the sender.
+  //   - import ConnectedSocket from '@nestjs/websockets' and  import type { Socket } from 'socket.io'  (the other imports are already there)
   //   - add a method with  @SubscribeMessage('send:others'),  @ConnectedSocket() client: Socket  and  @MessageBody() body: Body
   //   - hint: client.broadcast.emit('received', { pattern: 'others', from: body.from, text: body.text })
 }

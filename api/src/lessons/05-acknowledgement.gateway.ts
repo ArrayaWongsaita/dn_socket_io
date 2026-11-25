@@ -15,6 +15,7 @@ import { WebSocketGateway } from '@nestjs/websockets';
 })
 export class Lesson5Gateway {
   // TODO(5.1): answer the 'math:add' event. Data from the browser:  { a, b }
+  //   - import MessageBody and SubscribeMessage from '@nestjs/websockets'
   //   - add a method with  @SubscribeMessage('math:add')  and a  @MessageBody() body  parameter
   //   - RETURN { ok: true, result: a + b }   (the returned value is the acknowledgement)
   //   - if a or b is not a number, RETURN { ok: false, error: 'a and b must be numbers' } instead.

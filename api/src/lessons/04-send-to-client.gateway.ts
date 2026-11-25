@@ -23,6 +23,7 @@ export class Lesson4Gateway implements OnGatewayConnection {
   }
 
   // TODO(4.2): the browser says hello (event 'hello', data { name }); answer ONLY that browser.
+  //   - import ConnectedSocket, MessageBody and SubscribeMessage from '@nestjs/websockets' (like in lesson 3)
   //   - add a method with  @SubscribeMessage('hello')  (you wrote one in lesson 3)
   //   - parameters:  @ConnectedSocket() client: Socket   and   @MessageBody() body: { name: string }
   //   - hint: client.emit('hello:reply', { message: `Hello, ${body.name}!` })

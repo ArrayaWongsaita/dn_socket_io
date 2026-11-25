@@ -19,6 +19,7 @@ export class Lesson6Gateway {
   server: Namespace;
 
   // TODO(6.3): the browser sends 'shout' with { from, text }. Pass it on to EVERYONE.
+  //   - import MessageBody and SubscribeMessage from '@nestjs/websockets'
   //   - add a method with  @SubscribeMessage('shout')  and  @MessageBody() body: { from: string; text: string }
   //   - hint: this.server.emit('shout', { from: body.from, text: body.text })
 }
