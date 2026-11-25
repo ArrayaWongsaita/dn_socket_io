@@ -14,9 +14,9 @@ import { useSocketLog } from "@/lib/use-socket-log";
 //
 // Server side of this lesson: api/src/lessons/02-disconnect.gateway.ts
 export default function DisconnectLesson() {
-  // (You wrote this in lesson 1.) Connects to http://localhost:3001/lesson2
+  // (You wrote this in lesson 1.) The socket for http://localhost:3001/lesson2, connected in the effect below.
   const [socket] = useState<Socket | null>(() =>
-    typeof window === "undefined" ? null : io(`${API_URL}/lesson2`),
+    typeof window === "undefined" ? null : io(`${API_URL}/lesson2`, { autoConnect: false }),
   );
   const [connected, setConnected] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
@@ -35,6 +35,8 @@ export default function DisconnectLesson() {
       setConnected(false);
       setReason(why);
     });
+
+    socket.connect();
 
     return () => {
       socket.disconnect();

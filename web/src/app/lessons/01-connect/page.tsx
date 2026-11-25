@@ -13,10 +13,11 @@ import { useSocketLog } from "@/lib/use-socket-log";
 //
 // Server side of this lesson: api/src/lessons/01-connect.gateway.ts
 export default function ConnectLesson() {
-  // Step 1: open the connection to the "/lesson1" address of the API (http://localhost:3001/lesson1).
-  // `io(...)` connects right away. We create it once, and only in the browser (not while Next.js renders on the server).
+  // Step 1: create the socket for the "/lesson1" address of the API (http://localhost:3001/lesson1).
+  // `autoConnect: false` means "do not connect yet": we first listen to its events (step 2), then connect (step 3),
+  // so we can never miss the first event. We create it once, and only in the browser (not while Next.js renders on the server).
   const [socket] = useState<Socket | null>(() =>
-    typeof window === "undefined" ? null : io(`${API_URL}/lesson1`),
+    typeof window === "undefined" ? null : io(`${API_URL}/lesson1`, { autoConnect: false }),
   );
   const [connected, setConnected] = useState(false);
   const [socketId, setSocketId] = useState<string | null>(null);
@@ -31,6 +32,9 @@ export default function ConnectLesson() {
       setConnected(true);
       setSocketId(socket.id ?? null);
     });
+
+    // Step 3: now open the connection.
+    socket.connect();
 
     // Close the connection when you leave the page.
     return () => {
