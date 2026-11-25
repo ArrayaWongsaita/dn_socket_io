@@ -11,13 +11,23 @@ import type { Namespace, Socket } from 'socket.io';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { createAuthMiddleware } from '../socket/auth.middleware.js';
 
-// PAGE 3: CHAT ROOMS  (namespace: /chat)
+// LESSONS 11 + 12: THE CHAT  (namespace: /chat)
 //
-// A ROOM is a named group of sockets. Socket.IO does the bookkeeping for us:
-//   client.join('room:1')            put this socket in the group
-//   client.leave('room:1')           take it out
-//   server.to('room:1').emit(...)    send an event to everybody in the group
-// Sockets also leave their rooms automatically when they disconnect.
+// You know every command used here already:
+//   lesson 8   client.join / client.leave / server.to(room).emit     (rooms)
+//   lesson 5   returning { ok: ... } from a handler                  (acknowledgement)
+//   lesson 10  the handshake middleware and client.data.user         (who is connected)
+// New here: SAVING messages with Prisma, so people who join later (or come back) can read the history.
+// The history itself is served by the plain REST endpoint GET /rooms/:id/messages (rooms.controller.ts).
+//
+// Events (ack = the value you return is sent back to the sender):
+//   room:join    { roomId }        ack { ok: true } or { ok: false, error }
+//   room:leave   { roomId }        ack { ok: true }
+//   message:send { roomId, text }  ack { ok: true } or { ok: false, error }
+//   -> to the room:  message:new { id, text, createdAt, roomId, user }   (lesson 11)
+//   -> to the room:  room:members { roomId, members }                    (lesson 12)
+//
+// Web side: web/src/app/chat/page.tsx
 
 type RoomOnly = { roomId: number };
 type NewMessage = { roomId: number; text: string };
@@ -36,7 +46,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection {
     server.use(createAuthMiddleware(this.prisma));
   }
 
-  // Socket.IO tells us "this socket is about to disconnect" with the 'disconnecting' event.
+  // LESSON 12: Socket.IO tells us "this socket is about to disconnect" with the 'disconnecting' event.
   // At that moment it is still inside its rooms, so this is our chance to tell
   // each room that this person is leaving.
   handleConnection(client: Socket) {
@@ -49,7 +59,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection {
     });
   }
 
-  // The browser asks to enter a room.
+  // LESSON 11: the browser asks to enter a room.
   @SubscribeMessage('room:join')
   async joinRoom(@ConnectedSocket() client: Socket, @MessageBody() body: RoomOnly) {
     const room = await this.prisma.room.findUnique({ where: { id: Number(body.roomId) } });
@@ -58,11 +68,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection {
     }
 
     await client.join(roomName(room.id)); // <- the actual "enter the room"
-    await this.sendMemberList(roomName(room.id)); // tell everyone in the room who is there now
+    await this.sendMemberList(roomName(room.id)); // lesson 12: tell everyone in the room who is there now
     return { ok: true };
   }
 
-  // The browser asks to leave a room.
+  // LESSON 11: the browser asks to leave a room.
   @SubscribeMessage('room:leave')
   async leaveRoom(@ConnectedSocket() client: Socket, @MessageBody() body: RoomOnly) {
     await client.leave(roomName(Number(body.roomId)));
@@ -70,7 +80,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection {
     return { ok: true };
   }
 
-  // The browser sends a chat message to a room.
+  // LESSON 11: the browser sends a chat message to a room.
   @SubscribeMessage('message:send')
   async sendMessage(@ConnectedSocket() client: Socket, @MessageBody() body: NewMessage) {
     const room = roomName(Number(body.roomId));
@@ -102,7 +112,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection {
     return { ok: true };
   }
 
-  // Tells everybody in a room who is inside it. `leavingSocketId` lets us skip
+  // LESSON 12: tells everybody in a room who is inside it. `leavingSocketId` lets us skip
   // a socket that is in the middle of disconnecting.
   private async sendMemberList(room: string, leavingSocketId?: string) {
     const sockets = await this.server.in(room).fetchSockets();

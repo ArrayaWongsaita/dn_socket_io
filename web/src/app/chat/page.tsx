@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Socket } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 import { RequireUser } from "@/components/require-user";
 import { API_URL } from "@/lib/config";
-import { createSocket } from "@/lib/socket";
+import { useSocketLog } from "@/lib/use-socket-log";
+import { EventLog } from "@/components/event-log";
 
-// PAGE 3: CHAT ROOMS
+// LESSONS 11 + 12: CHAT ROOMS
 //
 // Goal: join a room, then send and receive messages that only that room sees.
 // Open two windows as two users, put both in the same room and chat.
@@ -24,7 +25,10 @@ export default function ChatPage() {
 }
 
 function ChatLesson({ me }: { me: User }) {
-  const socketRef = useRef<Socket | null>(null);
+  // The connection to /chat. Your user id goes in the handshake (lesson 10), so the server knows who you are.
+  const [socket] = useState<Socket | null>(() =>
+    typeof window === "undefined" ? null : io(`${API_URL}/chat`, { auth: { userId: me.id } }),
+  );
   // We need the current room inside socket listeners that are created only once,
   // so we keep a copy of it in a ref as well.
   const roomIdRef = useRef<number | null>(null);
@@ -36,42 +40,33 @@ function ChatLesson({ me }: { me: User }) {
   const [members, setMembers] = useState<User[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { entries } = useSocketLog(socket);
 
-  // Connect to the "/chat" namespace when the page opens, disconnect when it closes.
   useEffect(() => {
-    const socket = createSocket("/chat", me.id);
-    socketRef.current = socket;
+    if (!socket) return;
 
-    // 'connect' also fires again after the connection drops and comes back
-    // (Socket.IO reconnects by itself). The server forgets our rooms when we
-    // disconnect, so if we were in a room we must join it again.
     socket.on("connect", () => {
       setConnected(true);
-      if (roomIdRef.current !== null) {
-        socket.emit("room:join", { roomId: roomIdRef.current });
-      }
+      // LESSON 12: 'connect' also fires again after the connection drops and comes back (Socket.IO
+      // reconnects by itself). The server forgets our rooms when we disconnect, so join the room again.
+      if (roomIdRef.current !== null) socket.emit("room:join", { roomId: roomIdRef.current });
     });
     socket.on("disconnect", () => setConnected(false));
 
-    // A new message arrived in a room I am in -> add it to the list.
+    // LESSON 11: a new message arrived in a room I am in.
     socket.on("message:new", (message: NewMessage) => {
-      if (message.roomId === roomIdRef.current) {
-        setMessages((old) => [...old, message]);
-      }
+      if (message.roomId === roomIdRef.current) setMessages((old) => [...old, message]);
     });
 
-    // The server tells us who is in the room whenever someone joins or leaves.
+    // LESSON 12: the server says who is in the room.
     socket.on("room:members", (update: MembersUpdate) => {
-      if (update.roomId === roomIdRef.current) {
-        setMembers(update.members);
-      }
+      if (update.roomId === roomIdRef.current) setMembers(update.members);
     });
 
-    socket.connect();
     return () => {
       socket.disconnect();
     };
-  }, [me.id]);
+  }, [socket]);
 
   // The list of rooms comes from a normal REST call.
   useEffect(() => {
@@ -82,7 +77,7 @@ function ChatLesson({ me }: { me: User }) {
 
   // Enter a room: leave the old one, join the new one, then load old messages (REST).
   async function enterRoom(newRoomId: number) {
-    const socket = socketRef.current!;
+    if (!socket) return;
     setError(null);
 
     if (roomIdRef.current !== null) {
@@ -113,15 +108,15 @@ function ChatLesson({ me }: { me: User }) {
   // Send what the user typed to the room they are in.
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
-    if (roomId === null) return;
-    const reply = await socketRef.current!.emitWithAck("message:send", { roomId, text });
+    if (!socket || roomId === null) return;
+    const reply = await socket.emitWithAck("message:send", { roomId, text });
     if (reply.ok) setText("");
     else setError(reply.error);
   }
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">3. Chat rooms</h1>
+      <h1 className="text-2xl font-semibold">11-12. Chat rooms</h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         You are <strong>{me.name}</strong> ({connected ? "connected" : "not connected"}).
       </p>
@@ -189,6 +184,7 @@ function ChatLesson({ me }: { me: User }) {
         </section>
       </div>
       {error && <p className="text-red-600">{error}</p>}
+      <EventLog entries={entries} />
     </div>
   );
 }

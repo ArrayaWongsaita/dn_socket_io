@@ -1,10 +1,11 @@
 import request from 'supertest';
 import type { Socket } from 'socket.io-client';
-import { startApp, connectAs, collect, waitFor, sleep } from './helpers.js';
+import { startApp, connectAs, collect, sleep } from './helpers.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
-// Page 3: rooms. Users: 1 Alice, 2 Bob, 3 Carol. Rooms: 1 General, 2 Random, 3 Tech.
-describe('/chat namespace', () => {
+// Lesson 11: join a room, talk in it, and read the history after coming back.
+// Users: 1 Alice, 2 Bob, 3 Carol. Rooms: 1 General, 2 Random, 3 Tech. Needs the seeded database.
+describe('lesson 11: chat rooms with history', () => {
   let server: Awaited<ReturnType<typeof startApp>>;
   let prisma: PrismaService;
   const open: Socket[] = [];
@@ -14,7 +15,6 @@ describe('/chat namespace', () => {
     open.push(s);
     return s;
   };
-  const namesIn = (payload: { members: { name: string }[] }) => payload.members.map((m) => m.name).sort();
 
   beforeAll(async () => {
     server = await startApp();
@@ -30,20 +30,9 @@ describe('/chat namespace', () => {
     await server.close();
   });
 
-  it('join: the joiner gets ok and everyone in the room sees the new member list', async () => {
+  it('join: an existing room is acknowledged, an unknown room is refused', async () => {
     const alice = await connect(1);
-    const bob = await connect(2);
     expect(await alice.emitWithAck('room:join', { roomId: 1 })).toEqual({ ok: true });
-
-    const aliceSees = waitFor(alice, 'room:members');
-    expect(await bob.emitWithAck('room:join', { roomId: 1 })).toEqual({ ok: true });
-    const update = await aliceSees;
-    expect(update.roomId).toBe(1);
-    expect(namesIn(update)).toEqual(['Alice', 'Bob']);
-  });
-
-  it('join an unknown room is refused', async () => {
-    const alice = await connect(1);
     const ack = await alice.emitWithAck('room:join', { roomId: 999 });
     expect(ack.ok).toBe(false);
   });
@@ -70,6 +59,7 @@ describe('/chat namespace', () => {
     expect(res.body[0]).toMatchObject({ text: 'hello room', user: { id: 1, name: 'Alice' } });
   });
 
+
   it('sending to a room you have not joined is refused: nothing saved or delivered', async () => {
     const alice = await connect(1);
     const bob = await connect(2);
@@ -83,6 +73,7 @@ describe('/chat namespace', () => {
     expect(await prisma.message.count()).toBe(0);
   });
 
+
   it('blank text is refused and not saved', async () => {
     const alice = await connect(1);
     await alice.emitWithAck('room:join', { roomId: 1 });
@@ -91,50 +82,30 @@ describe('/chat namespace', () => {
     expect(await prisma.message.count()).toBe(0);
   });
 
+
   it('REST history for an unknown room is 404', async () => {
     await request(server.url).get('/rooms/999/messages').expect(404);
   });
 
-  it('leaving updates the member list for those who stay', async () => {
-    const alice = await connect(1);
-    const bob = await connect(2);
-    await alice.emitWithAck('room:join', { roomId: 1 });
-    await bob.emitWithAck('room:join', { roomId: 1 });
 
-    const aliceSees = waitFor(alice, 'room:members');
-    await bob.emitWithAck('room:leave', { roomId: 1 });
-    expect(namesIn(await aliceSees)).toEqual(['Alice']);
+  it('history: after leaving and coming back, the earlier messages are still served', async () => {
+    const alice = await connect(1);
+    await alice.emitWithAck('room:join', { roomId: 1 });
+    await alice.emitWithAck('message:send', { roomId: 1, text: 'first' });
+    await alice.emitWithAck('message:send', { roomId: 1, text: 'second' });
+    expect(await alice.emitWithAck('room:leave', { roomId: 1 })).toEqual({ ok: true });
+    await alice.emitWithAck('room:join', { roomId: 1 });
+    const res = await request(server.url).get('/rooms/1/messages').expect(200);
+    expect(res.body.map((m: { text: string }) => m.text)).toEqual(['first', 'second']);
   });
 
-  it('disconnecting updates the member list for those who stay', async () => {
+  it('history: someone who joins later can read what was said before', async () => {
     const alice = await connect(1);
-    const bob = await connect(2);
     await alice.emitWithAck('room:join', { roomId: 1 });
+    await alice.emitWithAck('message:send', { roomId: 1, text: 'before bob' });
+    const bob = await connect(2);
     await bob.emitWithAck('room:join', { roomId: 1 });
-
-    const aliceSees = waitFor(alice, 'room:members');
-    bob.disconnect();
-    expect(namesIn(await aliceSees)).toEqual(['Alice']);
-  });
-
-  it('a user with two tabs appears once, and stays until the last tab leaves', async () => {
-    const watcher = await connect(2);
-    const tab1 = await connect(1);
-    const tab2 = await connect(1);
-    await watcher.emitWithAck('room:join', { roomId: 1 });
-    await tab1.emitWithAck('room:join', { roomId: 1 });
-
-    const seen = collect(watcher, 'room:members');
-    await tab2.emitWithAck('room:join', { roomId: 1 });
-    await sleep(200);
-    expect(namesIn(seen.at(-1))).toEqual(['Alice', 'Bob']);
-
-    tab1.disconnect();
-    await sleep(200);
-    expect(namesIn(seen.at(-1))).toEqual(['Alice', 'Bob']); // tab2 still there
-
-    tab2.disconnect();
-    await sleep(200);
-    expect(namesIn(seen.at(-1))).toEqual(['Bob']);
+    const res = await request(server.url).get('/rooms/1/messages').expect(200);
+    expect(res.body[0]).toMatchObject({ text: 'before bob', user: { name: 'Alice' } });
   });
 });
