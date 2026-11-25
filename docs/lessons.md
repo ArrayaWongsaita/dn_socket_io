@@ -14,7 +14,7 @@ A **gateway** in Nest is like a controller, but it handles events instead of URL
 
 ## Stage A: Connect
 
-1. **Connect** (`01-connect`). TODO 1.1 `io(url)`, 1.2 `socket.on("connect")`, 1.3 log in `handleConnection`. You should see: status "connected", a socket id, and the same id in the API terminal.
+1. **Connect** (`01-connect`). TODO 1.1 `io(url, { autoConnect: false })`, 1.2 `socket.on("connect")` and then `socket.connect()` (listen first, connect after, so you never miss the event), 1.3 log in `handleConnection`. You should see: status "connected", a socket id, and the same id in the API terminal.
 2. **Disconnect** (`02-disconnect`). TODO 2.1 `socket.on("disconnect", reason)`, 2.2 `socket.disconnect()`, 2.3 log in `handleDisconnect`. Try: press Disconnect (`io client disconnect`), then stop the API (`transport close`).
 
 ## Stage B: Send messages

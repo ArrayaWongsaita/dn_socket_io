@@ -28,7 +28,7 @@ export default function NamespacesLesson() {
 function Channel({ namespace }: { namespace: "news" | "sports" }) {
   // Connect to a namespace by adding its name to the address: http://localhost:3001/news
   const [socket] = useState<Socket | null>(() =>
-    typeof window === "undefined" ? null : io(`${API_URL}/${namespace}`),
+    typeof window === "undefined" ? null : io(`${API_URL}/${namespace}`, { autoConnect: false }),
   );
   const [connected, setConnected] = useState(false);
   const [headlines, setHeadlines] = useState<string[]>([]);
@@ -40,6 +40,7 @@ function Channel({ namespace }: { namespace: "news" | "sports" }) {
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
     socket.on("headline", (data: { text: string }) => setHeadlines((old) => [data.text, ...old]));
+    socket.connect();
     return () => {
       socket.disconnect();
     };

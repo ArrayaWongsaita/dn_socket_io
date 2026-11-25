@@ -15,10 +15,11 @@ export default function ConnectLesson() {
   const [socket] = useState<Socket | null>(() => {
     if (typeof window === "undefined") return null; // never connect while Next.js renders on the server
 
-    // TODO(1.1): open the connection to the "/lesson1" address of the API and return the socket.
+    // TODO(1.1): create the socket for the "/lesson1" address of the API and return it.
     //   - import { io } from "socket.io-client" and  import { API_URL } from "@/lib/config"
     //   - the address is  API_URL + "/lesson1"  (that is http://localhost:3001/lesson1)
-    //   - hint: return io(`${API_URL}/lesson1`);   io() connects right away.
+    //   - hint: return io(`${API_URL}/lesson1`, { autoConnect: false });
+    //     `autoConnect: false` means "do not connect yet": first listen to the events (TODO 1.2), then connect.
     return null;
   });
   const [connected, setConnected] = useState(false);
@@ -29,8 +30,10 @@ export default function ConnectLesson() {
   useEffect(() => {
     if (!socket) return;
 
-    // TODO(1.2): the 'connect' event fires when the connection is ready. socket.id is set now.
+    // TODO(1.2): a) listen to the 'connect' event. It fires when the connection is ready; socket.id is set now.
     //   hint: socket.on("connect", () => { setConnected(true); setSocketId(socket.id ?? null); });
+    //   b) THEN open the connection (listening first means you can never miss the event).
+    //   hint: socket.connect();
     void setConnected;
     void setSocketId;
 

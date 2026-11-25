@@ -28,7 +28,7 @@ export default function ChatPage() {
 function ChatLesson({ me }: { me: User }) {
   // The connection to /chat. Your user id goes in the handshake (lesson 10), so the server knows who you are.
   const [socket] = useState<Socket | null>(() =>
-    typeof window === "undefined" ? null : io(`${API_URL}/chat`, { auth: { userId: me.id }, ackTimeout: 3000 }),
+    typeof window === "undefined" ? null : io(`${API_URL}/chat`, { auth: { userId: me.id }, ackTimeout: 3000, autoConnect: false }),
   );
   // We need the current room inside socket listeners that are created only once,
   // so we keep a copy of it in a ref as well.
@@ -63,6 +63,8 @@ function ChatLesson({ me }: { me: User }) {
     // TODO(12.4): "room:members" (update: MembersUpdate): the server says who is in the room.
     //   If update.roomId === roomIdRef.current -> setMembers(update.members)
     void setMembers;
+
+    socket.connect(); // listeners are ready: now connect
 
     return () => {
       socket.disconnect();

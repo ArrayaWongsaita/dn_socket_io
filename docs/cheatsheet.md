@@ -13,7 +13,8 @@
 ## Browser (`socket.io-client`)
 
 ```ts
-const socket = io("http://localhost:3001/lesson1");        // connect (a namespace is part of the address)
+const socket = io("http://localhost:3001/lesson1", { autoConnect: false }); // create (a namespace is part of the address)
+socket.connect();                                          // connect, after you attached your listeners
 const socket = io(url, { auth: { userId } });              // say who you are in the handshake (lesson 10)
 socket.on("connect", () => { socket.id });                 // connected
 socket.on("disconnect", (reason) => {});                   // connection ended
