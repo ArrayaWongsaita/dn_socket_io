@@ -1,54 +1,68 @@
-"use client";
+import Link from "next/link";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { API_URL } from "@/lib/config";
-import { saveCurrentUser, useCurrentUser } from "@/lib/current-user";
+const stages = [
+  {
+    name: "A. Connect",
+    lessons: [
+      ["/lessons/01-connect", "1. Connect", "io(), connect"],
+      ["/lessons/02-disconnect", "2. Disconnect", "disconnect"],
+    ],
+  },
+  {
+    name: "B. Send messages",
+    lessons: [
+      ["/lessons/03-send-to-server", "3. Client to server", "emit, @SubscribeMessage"],
+      ["/lessons/04-send-to-client", "4. Server to client", "client.emit, on"],
+      ["/lessons/05-acknowledgement", "5. Acknowledgement", "return a value, emitWithAck"],
+    ],
+  },
+  {
+    name: "C. Send to many",
+    lessons: [
+      ["/lessons/06-everyone", "6. Everyone", "server.emit"],
+      ["/lessons/07-everyone-else", "7. Everyone except me", "broadcast.emit"],
+    ],
+  },
+  {
+    name: "D. Groups",
+    lessons: [
+      ["/lessons/08-rooms", "8. Rooms", "join, leave, to(room).emit"],
+      ["/lessons/09-namespaces", "9. Namespaces", "namespace option"],
+    ],
+  },
+  {
+    name: "E. Chat (needs Docker + database)",
+    lessons: [
+      ["/lessons/10-auth", "10. Who is connected", "handshake auth, middleware"],
+      ["/chat", "11-12. Chat rooms with history", "rooms + saved messages, members"],
+    ],
+  },
+] as const;
 
-type User = { id: number; name: string };
-
-// PAGE 0: pick who you are. There is no password: just click a user.
-// Tip: open another browser window, pick a different user, and you can
-// test two people talking to each other.
-export default function PickUserPage() {
-  const router = useRouter();
-  const current = useCurrentUser();
-  const [users, setUsers] = useState<User[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  // Ask the Nest API (plain REST) for the list of users.
-  useEffect(() => {
-    fetch(`${API_URL}/users`)
-      .then((res) => res.json())
-      .then(setUsers)
-      .catch(() => setError(`Cannot reach the API at ${API_URL}. Is it running?`));
-  }, []);
-
-  function pick(user: User) {
-    saveCurrentUser(user);
-    router.push("/connection");
-  }
-
+// The home page: the whole course on one screen.
+export default function Home() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Who do you want to be?</h1>
+      <h1 className="text-2xl font-semibold">Socket.IO, one command at a time</h1>
       <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-        Click a user. Use a different user in each browser window to test.
+        Do the lessons in order. Each one adds one or two commands and shows the result right away.
+        Open two or three browser tabs to see events travel between them.
       </p>
-      {error && <p className="mt-4 text-red-600">{error}</p>}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {users.map((user) => (
-          <button
-            key={user.id}
-            onClick={() => pick(user)}
-            className={`rounded-lg border p-4 text-lg font-medium hover:border-indigo-500 ${
-              current?.id === user.id
-                ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-950"
-                : "border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900"
-            }`}
-          >
-            {user.name}
-          </button>
+      <div className="mt-6 space-y-6">
+        {stages.map((stage) => (
+          <section key={stage.name}>
+            <h2 className="font-medium">{stage.name}</h2>
+            <ul className="mt-2 space-y-1">
+              {stage.lessons.map(([href, title, commands]) => (
+                <li key={href}>
+                  <Link href={href} className="text-indigo-600 underline dark:text-indigo-400">
+                    {title}
+                  </Link>{" "}
+                  <span className="text-sm text-zinc-500">{commands}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         ))}
       </div>
     </div>
