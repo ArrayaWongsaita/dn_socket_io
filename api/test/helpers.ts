@@ -29,6 +29,26 @@ export function connectAs(url: string, namespace: string, userId?: unknown): Pro
   });
 }
 
+// Connects to a namespace that needs no login (lessons 1-9).
+// `setup` runs BEFORE the connection starts, so a test can attach listeners
+// and not miss an event the server sends right after connecting.
+export function connectTo(
+  url: string,
+  namespace: string,
+  setup?: (socket: Socket) => void,
+): Promise<Socket> {
+  return new Promise((resolve, reject) => {
+    const socket = io(url + namespace, { forceNew: true, transports: ['websocket'], autoConnect: false });
+    setup?.(socket);
+    socket.on('connect', () => resolve(socket));
+    socket.on('connect_error', (err) => {
+      socket.close();
+      reject(err);
+    });
+    socket.connect();
+  });
+}
+
 // Waits for one event; used to assert "this socket received it".
 export function waitFor<T = any>(socket: Socket, event: string, timeoutMs = 1000): Promise<T> {
   return new Promise((resolve, reject) => {
